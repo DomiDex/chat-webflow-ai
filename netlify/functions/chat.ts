@@ -28,8 +28,8 @@ const handler: Handler = async (
     };
   }
 
-  // 2. Get API Key (from Netlify environment variables - use process.env for Node.js fallback)
-  const apiKey = process.env.GOOGLE_AI_API_KEY; // Deno.env.get('GOOGLE_AI_API_KEY');
+  // 2. Get API Key (from Netlify environment variables - Deno.env should work in deployment)
+  const apiKey = Deno.env.get('GOOGLE_AI_API_KEY');
   if (!apiKey) {
     console.error(
       'Google AI API Key not configured in Netlify environment variables.'
