@@ -49,16 +49,9 @@ const handler: Handler = async (
     // Trigger the background function via internal fetch
     console.log('Triggering background function via fetch: chat-background');
     try {
-      // Construct the absolute URL using Netlify's URL env var
-      const baseUrl = process.env.URL;
-      if (!baseUrl) {
-        console.error('Error: Netlify URL environment variable not found.');
-        throw new Error(
-          'Cannot determine base URL for background function invocation.'
-        );
-      }
-      const invokeUrl = `${baseUrl}/.netlify/functions/chat-background`;
-      console.log(`Attempting background fetch to: ${invokeUrl}`); // Log the full URL
+      // Revert to relative path for internal fetch
+      const invokeUrl = `/.netlify/functions/chat-background`;
+      // console.log(`Attempting background fetch to: ${invokeUrl}`); // Remove log
 
       await fetch(invokeUrl, {
         method: 'POST',
@@ -74,9 +67,14 @@ const handler: Handler = async (
         'Error triggering background function via fetch:',
         invokeError
       );
+      // Include invokeError message in the response body for debugging
+      let errorMsg = 'Could not invoke background task via fetch.';
+      if (invokeError instanceof Error) {
+        errorMsg += ` Reason: ${invokeError.message}`;
+      }
       return {
         statusCode: 500,
-        body: 'Internal Server Error: Could not invoke background task via fetch.',
+        body: `Internal Server Error: ${errorMsg}`,
       };
     }
 
