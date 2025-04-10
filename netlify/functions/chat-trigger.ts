@@ -77,7 +77,7 @@ const handler: Handler = async (
     // 2. Call Google AI API
     // Use AbortController for timeout (recommended for synchronous functions)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9000); // ~9 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 50000); // 50 seconds timeout
 
     let aiResponse;
     try {
