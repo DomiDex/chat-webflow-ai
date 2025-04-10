@@ -2,6 +2,10 @@
 // Use types from the installed package
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 
+// Load the API documentation summary from a JSON file
+// Make sure 'webflow-api-docs.json' is in the same directory or adjust the path
+// import * as webflowApiDocs from './webflow-api-docs.json'; // Replaced with require below
+
 // Define the expected structure of the request body from Webflow
 interface ChatRequestBody {
   message: string;
@@ -57,9 +61,19 @@ const handler: Handler = async (
       };
     }
 
+    // Load the API docs summary from JSON
+    const webflowApiDocs = require('./webflow-api-docs.json');
+
+    // Define the system instruction based on the Webflow API v2 documentation summary
+    // const webflowApiSummary = ` ... hardcoded string removed ... `;
+
     // 4. Prepare Payload for Google AI API
     //    (Adapt this structure based on the specific Google AI model API docs)
     const aiPayload = {
+      system_instruction: {
+        // Use the summary loaded from the JSON file
+        parts: [{ text: webflowApiDocs.systemPromptSummary }],
+      },
       contents: [
         // Include previous history for context
         ...history,
