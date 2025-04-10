@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    // Add Deno types via the 'types' array below, not 'lib'
+    "lib": ["esnext", "dom"],
+    // Explicitly include Deno types from node_modules/@types/deno
+    "types": ["@types/deno"],
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true
+  },
+  "include": ["netlify/functions/**/*.ts"],
+  "exclude": ["node_modules"]
+}

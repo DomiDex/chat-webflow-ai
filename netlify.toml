@@ -1,0 +1,15 @@
+# netlify.toml
+[functions]
+  directory = "netlify/functions" # Specifies where your function code lives
+  node_bundler = "esbuild"      # Standard bundler
+
+# Specify Deno runtime for functions in this directory
+[functions."netlify/functions/*"]
+  runtime = "deno"
+  # You might need layer configuration depending on dependencies or future needs
+  # denoland_layers = [""] # Example if layers were needed
+
+# Optional: Build settings if you have frontend assets to build/deploy
+# [build]
+#   command = "your-build-command" # e.g., npm run build
+#   publish = "your-publish-directory" # e.g., dist 
