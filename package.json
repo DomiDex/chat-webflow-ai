@@ -1,5 +1,7 @@
 {
   "devDependencies": {
-    "@types/deno": "^2.2.0"
+    "@netlify/functions": "^3.0.4",
+    "@types/deno": "^2.2.0",
+    "@types/node": "^22.14.0"
   }
 }

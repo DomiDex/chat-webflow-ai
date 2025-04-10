@@ -6,7 +6,8 @@
     // Add Deno types via the 'types' array below, not 'lib'
     "lib": ["esnext", "dom"],
     // Explicitly include Deno types from node_modules/@types/deno
-    "types": ["@types/deno"],
+    // Also include Node types now
+    "types": ["@types/deno", "node"],
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

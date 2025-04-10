@@ -1,5 +1,6 @@
 // netlify/functions/chat.ts
-import { Context } from 'https://edge.netlify.com/'; // Netlify Edge Context (works for regular functions too)
+// Use types from the installed package
+import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 
 // Define the expected structure of the request body from Webflow
 interface ChatRequestBody {
@@ -14,31 +15,46 @@ interface ChatRequestBody {
 const GOOGLE_AI_API_ENDPOINT =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent';
 
-export default async (request: Request, context: Context) => {
-  // 1. Check Request Method
-  if (request.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 });
+// Use the Handler type from @netlify/functions
+const handler: Handler = async (
+  event: HandlerEvent,
+  context: HandlerContext
+) => {
+  // 1. Check Request Method (using event.httpMethod)
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      body: 'Method Not Allowed',
+    };
   }
 
-  // 2. Get API Key (from Netlify environment variables)
-  const apiKey = Deno.env.get('GOOGLE_AI_API_KEY');
+  // 2. Get API Key (from Netlify environment variables - use process.env for Node.js fallback)
+  const apiKey = process.env.GOOGLE_AI_API_KEY; // Deno.env.get('GOOGLE_AI_API_KEY');
   if (!apiKey) {
     console.error(
       'Google AI API Key not configured in Netlify environment variables.'
     );
-    return new Response('Internal Server Error: API Key missing', {
-      status: 500,
-    });
+    return {
+      statusCode: 500,
+      body: 'Internal Server Error: API Key missing',
+    };
   }
 
   try {
-    // 3. Parse Incoming Request Body
-    const { message, history = [] }: ChatRequestBody = await request.json();
+    // 3. Parse Incoming Request Body (using event.body)
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        body: 'Bad Request: Missing request body.',
+      };
+    }
+    const { message, history = [] }: ChatRequestBody = JSON.parse(event.body);
 
     if (!message) {
-      return new Response("Bad Request: 'message' is required.", {
-        status: 400,
-      });
+      return {
+        statusCode: 400,
+        body: "Bad Request: 'message' is required.",
+      };
     }
 
     // 4. Prepare Payload for Google AI API
@@ -62,7 +78,7 @@ export default async (request: Request, context: Context) => {
       // safetySettings: [ ... ]
     };
 
-    // 5. Call Google AI API
+    // 5. Call Google AI API (fetch still works)
     const aiResponse = await fetch(
       `${GOOGLE_AI_API_ENDPOINT}?key=${apiKey}`, // API key as query param
       {
@@ -78,9 +94,10 @@ export default async (request: Request, context: Context) => {
     if (!aiResponse.ok) {
       const errorBody = await aiResponse.text();
       console.error(`Google AI API Error (${aiResponse.status}): ${errorBody}`);
-      return new Response(`AI Service Error: ${aiResponse.statusText}`, {
-        status: aiResponse.status,
-      });
+      return {
+        statusCode: aiResponse.status,
+        body: `AI Service Error: ${aiResponse.statusText}`,
+      };
     }
 
     // 7. Parse AI Response
@@ -92,9 +109,9 @@ export default async (request: Request, context: Context) => {
       aiData?.candidates?.[0]?.content?.parts?.[0]?.text ||
       "Sorry, I couldn't generate a response.";
 
-    // 8. Send Response Back to Webflow
-    return new Response(JSON.stringify({ reply: replyText }), {
-      status: 200,
+    // 8. Send Response Back to Webflow (return object with statusCode, headers, body)
+    return {
+      statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
         // IMPORTANT: Set CORS headers to allow requests from your Webflow domain
@@ -103,7 +120,8 @@ export default async (request: Request, context: Context) => {
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
       },
-    });
+      body: JSON.stringify({ reply: replyText }),
+    };
   } catch (error) {
     console.error('Error processing chat request:', error);
     // Type guard for unknown error
@@ -111,29 +129,20 @@ export default async (request: Request, context: Context) => {
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return new Response(`Internal Server Error: ${errorMessage}`, {
-      status: 500,
-    });
+    return {
+      statusCode: 500,
+      body: `Internal Server Error: ${errorMessage}`,
+    };
   }
 };
 
-// Optional: Handle OPTIONS requests for CORS preflight
-export const config = {
-  path: '/api/chat', // Or use the filename 'chat' -> /.netlify/functions/chat
-  method: ['POST', 'OPTIONS'], // Allow POST and OPTIONS
-};
+// Export the handler
+export { handler };
 
-// You might need a specific handler for OPTIONS if the default doesn't suffice
-// or rely on Netlify's automatic handling based on the returned headers in the POST response.
-// If issues arise, explicitly handle OPTIONS:
-// if (request.method === "OPTIONS") {
-//   return new Response(null, {
-//     status: 204, // No Content
-//     headers: {
-//       "Access-Control-Allow-Origin": "*", // Or specific domain
-//       "Access-Control-Allow-Methods": "POST, OPTIONS",
-//       "Access-Control-Allow-Headers": "Content-Type",
-//       "Allow": "POST, OPTIONS",
-//     },
-//   });
-// }
+// Optional: Handle OPTIONS requests for CORS preflight
+// The config object might need adjustment or removal if using the Handler type primarily
+// Netlify often handles OPTIONS implicitly when CORS headers are present on POST
+// export const config = {
+//     path: "/api/chat", // Or use the filename 'chat' -> /.netlify/functions/chat
+//     method: ["POST", "OPTIONS"], // Allow POST and OPTIONS
+//   };

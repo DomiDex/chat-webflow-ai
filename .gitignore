@@ -1,2 +1,29 @@
 # Local Netlify folder
-.netlify
+# .netlify - Removed duplicate below
+
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Netlify
+.netlify/
+
+# Build output (Optional - if you have a build step)
+# dist/
+# build/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+
