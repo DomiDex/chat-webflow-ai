@@ -93,49 +93,69 @@ const handler: Handler = async (
     };
 
     // 5. Call Google AI API (fetch still works)
-    const aiResponse = await fetch(
-      `${GOOGLE_AI_API_ENDPOINT}?key=${apiKey}`, // API key as query param
-      {
-        method: 'POST',
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 9500); // 9.5 seconds timeout
+
+    try {
+      const aiResponse = await fetch(
+        `${GOOGLE_AI_API_ENDPOINT}?key=${apiKey}`, // API key as query param
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(aiPayload),
+          signal: controller.signal, // Add the abort signal here
+        }
+      );
+      clearTimeout(timeoutId); // Clear the timeout if fetch completes in time
+
+      // 6. Handle AI Response Status
+      if (!aiResponse.ok) {
+        const errorBody = await aiResponse.text();
+        console.error(
+          `Google AI API Error (${aiResponse.status}): ${errorBody}`
+        );
+        return {
+          statusCode: aiResponse.status,
+          body: `AI Service Error: ${aiResponse.statusText}`,
+        };
+      }
+
+      // 7. Parse AI Response
+      const aiData = await aiResponse.json();
+
+      // Extract the response text (adapt based on actual API response structure)
+      // This is a common structure, but VERIFY with Google's documentation
+      const replyText =
+        aiData?.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "Sorry, I couldn't generate a response.";
+
+      // 8. Send Response Back to Webflow (return object with statusCode, headers, body)
+      return {
+        statusCode: 200,
         headers: {
           'Content-Type': 'application/json',
+          // IMPORTANT: Set CORS headers to allow requests from your Webflow domain
+          // Replace '*' with your specific Webflow domain for better security in production
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
         },
-        body: JSON.stringify(aiPayload),
-      }
-    );
-
-    // 6. Handle AI Response Status
-    if (!aiResponse.ok) {
-      const errorBody = await aiResponse.text();
-      console.error(`Google AI API Error (${aiResponse.status}): ${errorBody}`);
-      return {
-        statusCode: aiResponse.status,
-        body: `AI Service Error: ${aiResponse.statusText}`,
+        body: JSON.stringify({ reply: replyText }),
       };
+    } catch (error) {
+      clearTimeout(timeoutId); // Ensure timeout is cleared on error too
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Google AI API call timed out before Netlify limit.');
+        return {
+          statusCode: 504, // Gateway Timeout
+          body: 'Error: AI service request timed out.',
+        };
+      }
+      // Re-throw other errors or handle them as before
+      throw error;
     }
-
-    // 7. Parse AI Response
-    const aiData = await aiResponse.json();
-
-    // Extract the response text (adapt based on actual API response structure)
-    // This is a common structure, but VERIFY with Google's documentation
-    const replyText =
-      aiData?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Sorry, I couldn't generate a response.";
-
-    // 8. Send Response Back to Webflow (return object with statusCode, headers, body)
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        // IMPORTANT: Set CORS headers to allow requests from your Webflow domain
-        // Replace '*' with your specific Webflow domain for better security in production
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-      body: JSON.stringify({ reply: replyText }),
-    };
   } catch (error) {
     console.error('Error processing chat request:', error);
     // Type guard for unknown error
