@@ -49,9 +49,19 @@ const handler: Handler = async (
     // Trigger the background function via internal fetch
     console.log('Triggering background function via fetch: chat-background');
     try {
-      // Revert to relative path for internal fetch
-      const invokeUrl = `/.netlify/functions/chat-background`;
-      // console.log(`Attempting background fetch to: ${invokeUrl}`); // Remove log
+      // Construct the absolute URL for the background function
+      const siteUrl = process.env.URL;
+      if (!siteUrl) {
+        console.error(
+          'Site URL (process.env.URL) is not defined. Cannot invoke background function.'
+        );
+        return {
+          statusCode: 500,
+          body: 'Internal Server Error: Configuration error - site URL not found.',
+        };
+      }
+      const invokeUrl = `${siteUrl}/.netlify/functions/chat-background`;
+      console.log(`Attempting background fetch to: ${invokeUrl}`); // Log the constructed URL
 
       await fetch(invokeUrl, {
         method: 'POST',
