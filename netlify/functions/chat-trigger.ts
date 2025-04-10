@@ -1,5 +1,5 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
-import { Buffer } from 'node:buffer'; // Required for payload encoding
+// import { Buffer } from 'node:buffer'; // No longer needed for fetch invocation
 
 // Define the structure expected from the client
 interface ClientChatRequestBody {
@@ -46,40 +46,42 @@ const handler: Handler = async (
       history: history,
     };
 
-    // Trigger the background function
-    // Note: Background functions are invoked via context.clientContext
-    if (context.clientContext?.identity && context.clientContext?.user) {
-      console.log('Triggering background function: chat-background');
-      await context.clientContext.functions.invoke(
-        'chat-background', // Name of the background function file (without extension)
-        {
-          body: JSON.stringify(backgroundPayload),
-        }
-      );
-      console.log('Background function triggered.');
-
-      // Return 202 Accepted - telling the client the request is being processed
-      return {
-        statusCode: 202,
-        body: JSON.stringify({
-          message:
-            'Chat request received and is being processed in the background.',
-        }),
+    // Trigger the background function via internal fetch
+    console.log('Triggering background function via fetch: chat-background');
+    try {
+      const invokeUrl = `/.netlify/functions/chat-background`; // Relative URL
+      await fetch(invokeUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*', // Keep CORS headers if needed
+          'X-Netlify-Functions-Background': 'true', // Header to trigger background
         },
-      };
-    } else {
+        body: JSON.stringify(backgroundPayload),
+      });
+      console.log('Background function triggered via fetch.');
+    } catch (invokeError) {
       console.error(
-        'Error: Could not trigger background function due to missing clientContext.'
+        'Error triggering background function via fetch:',
+        invokeError
       );
-      // This might happen during local dev if not properly logged in/linked
       return {
         statusCode: 500,
-        body: 'Internal Server Error: Could not invoke background task.',
+        body: 'Internal Server Error: Could not invoke background task via fetch.',
       };
     }
+
+    // Return 202 Accepted - telling the client the request is being processed
+    return {
+      statusCode: 202,
+      body: JSON.stringify({
+        message:
+          'Chat request received and is being processed in the background.',
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // Keep CORS headers if needed
+      },
+    };
   } catch (error) {
     console.error('Error in trigger function:', error);
     let errorMessage = 'Unknown error';
