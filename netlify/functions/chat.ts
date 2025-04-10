@@ -1,6 +1,7 @@
 // netlify/functions/chat.ts
 // Use types from the installed package
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
+import * as path from 'path'; // Import path module
 
 // Load the API documentation summary from a JSON file
 // Make sure 'webflow-api-docs.json' is in the same directory or adjust the path
@@ -61,8 +62,9 @@ const handler: Handler = async (
       };
     }
 
-    // Load the API docs summary from JSON
-    const webflowApiDocs = require('./webflow-api-docs.json');
+    // Load the API docs summary from JSON using an absolute path
+    const jsonPath = path.resolve(__dirname, 'webflow-api-docs.json');
+    const webflowApiDocs = require(jsonPath);
 
     // Define the system instruction based on the Webflow API v2 documentation summary
     // const webflowApiSummary = ` ... hardcoded string removed ... `;
