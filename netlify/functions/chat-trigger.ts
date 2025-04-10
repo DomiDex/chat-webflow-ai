@@ -67,11 +67,28 @@ const handler: Handler = async (
         'Error triggering background function via fetch:',
         invokeError
       );
-      // Include invokeError message in the response body for debugging
+      // Log the full error structure for backend visibility
+      console.error(
+        'Detailed Invoke Error:',
+        JSON.stringify(invokeError, null, 2)
+      );
+
+      // Include more details in the response body for debugging
       let errorMsg = 'Could not invoke background task via fetch.';
+      let errorDetails = 'No additional details available.';
       if (invokeError instanceof Error) {
-        errorMsg += ` Reason: ${invokeError.message}`;
+        errorDetails = `Type: Error, Message: ${invokeError.message}, Stack: ${invokeError.stack}`;
+      } else if (typeof invokeError === 'object' && invokeError !== null) {
+        errorDetails = `Type: ${typeof invokeError}, Content: ${JSON.stringify(
+          invokeError
+        )}`;
+      } else {
+        errorDetails = `Type: ${typeof invokeError}, Content: ${String(
+          invokeError
+        )}`;
       }
+      errorMsg += ` Details: ${errorDetails}`;
+
       return {
         statusCode: 500,
         body: `Internal Server Error: ${errorMsg}`,
